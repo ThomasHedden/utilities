@@ -1,13 +1,15 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> // needed for strtoll()
+#include <errno.h>  // needed for errno
+#include <limits.h> // needed for INT_MAX etc.
 
-/* Written by Thomas Hedden 20 January 2024.
+/* Written by Thomas Hedden January 2024.
    This program shows the bit patterns for
    integer commmand line arguments. The
-   integers can be of any length: 1 byte
-   (char), 2 bytes (short int), 4 bytes
-   (int), or 8 bytes (long), and they
-   can be written as decimal integers,
+   integers can be of any length:
+   1 byte (char), 2 bytes (short int),
+   4 bytes (int), or 8 bytes (long), and
+   they can be written as decimal integers,
    hexadecimal integers (e.g., 0x41),
    or as octal integers (e.g., 0755).
    Only as many bytes are shown as are
@@ -17,7 +19,7 @@
    numeric character detected, so floats
    will be truncated at the decimal point,
    and alphabetic characters (A, B, C,
-   etc.) will return 0.
+   etc.) will return 00000000.
    The bit patterns of multiple arguments
    are output on separate lines, and,
    if an integer requires more than one
@@ -30,11 +32,12 @@
    11010000 10010110 */
 
 char * showbits(char *, char);
+void error_check(char *, long long int, char *);
 
 int main(int argc, char * argv[]) {
    // test for input, output syntax message
    if(argc < 2) {
-      fprintf(stderr, "syntax: %s decimal number(s)\n", argv[0]);
+      fprintf(stderr, "syntax: %s integer(s)\n", argv[0]);
       exit(1);
    }
 
@@ -52,21 +55,27 @@ int main(int argc, char * argv[]) {
    // holds bit pattern of each byte in n
    char c;
 
+   // used for error checking
+   char *end;
+
    for(int i = 1; i < argc; i++) {
+      errno = 0;
       // convert command line parameter from string
       // to long long int
       // assigning 0 as last argument to strtoll() makes
       // it recognize numbers as decimal (if they don't
       // begin with 0), hexadecimal (if they begin with
       // 0x), or octal (if they begin with 0 but not 0x).
-      n = strtoll(argv[i], NULL, 0);
+      n = strtoll(argv[i], &end, 0);
 
       // one-byte range
       if(n >= -128 && n <= 255) {
          c = (char) n;
          mystr = showbits(mystr, c);
          fprintf(stdout, "%s", mystr);
-         fprintf(stdout, "\n");
+         fprintf(stdout, "     ");
+         // check for errors
+         error_check(argv[i], n, end);
          continue;
       }
       // two-byte range
@@ -79,7 +88,9 @@ int main(int argc, char * argv[]) {
          c = (0x00FF & n);
          mystr = showbits(mystr, c);
          fprintf(stdout, "%s", mystr);
-         fprintf(stdout, "\n");
+         fprintf(stdout, "     ");
+         // check for errors
+         error_check(argv[i], n, end);
          continue;
       }
       // four-byte range
@@ -100,7 +111,9 @@ int main(int argc, char * argv[]) {
          c = (0x000000FF & n);
          mystr = showbits(mystr, c);
          fprintf(stdout, "%s", mystr);
-         fprintf(stdout, "\n");
+         fprintf(stdout, "     ");
+         // check for errors
+         error_check(argv[i], n, end);
          continue;
       }
       // eight-byte range
@@ -137,7 +150,9 @@ int main(int argc, char * argv[]) {
          c = (0x00000000000000FF & n);
          mystr = showbits(mystr, c);
          fprintf(stdout, "%s", mystr);
-         fprintf(stdout, "\n");
+         fprintf(stdout, "     ");
+         // check for errors
+         error_check(argv[i], n, end);
          continue;
       }
    }
